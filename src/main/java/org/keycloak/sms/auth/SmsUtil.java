@@ -75,17 +75,17 @@ public class SmsUtil {
     };
 
 
-    public static Boolean sendSms(String phoneNumber, AuthenticationFlowContext context) {
+    public static String sendSms(String phoneNumber, AuthenticationFlowContext context) {
 
         AuthenticatorConfigModel configModel = context.getAuthenticatorConfig();
 
         String phoneHasCode = get_cache().get(phoneNumber);
         if (phoneHasCode != null) {
-            return true;
+            return SUCCESS_FLAG;
         }
         if (configModel == null) {
             logger.infof("该流程中未定义短信相关参数");
-            return false;
+            return "未配置";
         }
 
         Map<String, String> config = configModel.getConfig();
@@ -101,7 +101,7 @@ public class SmsUtil {
         });
 
         if (!allHas) {
-            return false;
+            return "未配置";
         }
 
         // 参数校验
@@ -148,14 +148,14 @@ public class SmsUtil {
                 // 缓存 验证码
                 get_cache().put(phoneNumber + CODE_CATCH_SUFFIX, code, codeExp, TimeUnit.MINUTES);
                 logger.infof("发送验证码成功并缓存");
-                return true;
+                return SUCCESS_FLAG;
             } else {
-                return false;
+                return result.errMsg;
             }
         } catch (HTTPException | IOException e) {
             e.printStackTrace();
         }
-        return true;
+        return SUCCESS_FLAG;
     }
 
 

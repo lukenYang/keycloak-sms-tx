@@ -11,7 +11,7 @@
                     <label for="totp" class="${properties.kcLabelClass!}" >手机号</label>
                 </div>
                 <div class="${properties.kcInputWrapperClass!}">
-                    <input id="totp" 
+                    <input id="totp"
                         name="phone" 
                         type="text" 
                         class="${properties.kcInputClass!}"

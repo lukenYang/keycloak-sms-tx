@@ -10,7 +10,6 @@ import org.keycloak.models.utils.FormMessage;
 import org.keycloak.services.validation.Validation;
 
 import javax.ws.rs.core.Response;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -32,8 +31,25 @@ public class SmsAuthenticator implements Authenticator {
 
     private static final String USER_ATTR_PHONE_KEY = "phone";
 
+
     @Override
     public void authenticate(AuthenticationFlowContext context) {
+        logger.infof("auth");
+        String flowPath = context.getFlowPath();
+
+        if (FLOW_AUTHENTICATE.equals(flowPath)) {
+            UserModel userModel = context.getUser();
+            if (userModel != null) {
+                // 判断用户是否有手机号 有就直接成功
+                List phoneAttr = userModel.getAttribute(USER_ATTR_PHONE_KEY);
+                if (phoneAttr != null && phoneAttr.size() == 1) {
+                    logger.infof("content success");
+                    context.success();
+                    return;
+                }
+            }
+        }
+
         LoginFormsProvider loginFormsProvider = context.form();
         setScene(context, loginFormsProvider);
         Response challenge = loginFormsProvider.createForm(PAGE_FTL);
@@ -46,6 +62,7 @@ public class SmsAuthenticator implements Authenticator {
         return userModels != null && userModels.size() == 1 ? userModels.get(0) : null;
     }
 
+
     @Override
     public void action(AuthenticationFlowContext context) {
 
@@ -54,7 +71,6 @@ public class SmsAuthenticator implements Authenticator {
         UserProvider userProvider = context.getSession().users();
         RealmModel realmModel = context.getRealm();
 
-        context.getRealm();
         String flowPath = context.getFlowPath();
         String phone = (context.getHttpRequest().getDecodedFormParameters().getFirst("phone"));
         String submitAction = (context.getHttpRequest().getDecodedFormParameters().getFirst("submitAction"));
@@ -84,12 +100,6 @@ public class SmsAuthenticator implements Authenticator {
                 }
                 break;
             case FLOW_REST_CREDENTIALS:
-                UserModel oldUser = this.findUserModelByPhone(phone, userProvider, realmModel);
-                if (oldUser == null) {
-                    setError("该手机号未注册", context, loginFormsProvider);
-                    return;
-                }
-                break;
             case FLOW_AUTHENTICATE:
                 UserModel hasUser = this.findUserModelByPhone(phone, userProvider, realmModel);
                 if (hasUser == null) {
@@ -104,13 +114,15 @@ public class SmsAuthenticator implements Authenticator {
             case SUBMIT_GETCODE:
                 logger.infof("发送验证码");
                 // context.getAuthenticatorConfig();
-                boolean su = SmsUtil.sendSms(phone, context);
+                String sendSmsMsg = SmsUtil.sendSms(phone, context);
+
+                boolean su = SmsUtil.SUCCESS_FLAG.equals(sendSmsMsg);
                 if (su) {
                     loginFormsProvider.setAttribute("sendCode", true);
                     setSuccess("发送验证码成功", context, loginFormsProvider);
                     return;
                 } else {
-                    setError("发送未知错误", context, loginFormsProvider);
+                    setError(sendSmsMsg, context, loginFormsProvider);
                 }
                 return;
             case SUBMIT_OK:
@@ -121,17 +133,21 @@ public class SmsAuthenticator implements Authenticator {
                     if (FLOW_REST_CREDENTIALS.equals(flowPath)) {
                         user = this.findUserModelByPhone(phone, userProvider, realmModel);
                     } else if (FLOW_REGISTRATION.equals(flowPath)) {
-                        user = userProvider.addUser(realmModel, phone);
+                        UserModel cUser = context.getUser();
+                        user = cUser == null ? userProvider.addUser(realmModel, phone) : cUser;
                         user.setSingleAttribute(USER_ATTR_PHONE_KEY, phone);
                     } else if (FLOW_FIRST_BROKER_LOGIN.equals(flowPath)) {
                         user = this.findUserModelByPhone(phone, userProvider, realmModel);
                         if (user == null) {
-                            user = userProvider.addUser(realmModel, phone);
+                            UserModel cUser = context.getUser();
+                            user = cUser == null ? userProvider.addUser(realmModel, phone) : cUser;
                             user.setSingleAttribute(USER_ATTR_PHONE_KEY, phone);
                         }
+                    } else if (FLOW_AUTHENTICATE.equals(flowPath)) {
+                        user = this.findUserModelByPhone(phone, userProvider, realmModel);
                     } else {
-                        // no
-                        setError(msg, context, loginFormsProvider);
+                        // cant
+                        setError("执行到未定义流程", context, loginFormsProvider);
                         return;
                     }
                     user.setEnabled(true);
