@@ -8,7 +8,7 @@
         <form id="kc-totp-login-form" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
             <div class="${properties.kcFormGroupClass!}">
                 <div class="${properties.kcLabelWrapperClass!}">
-                    <label for="totp" class="${properties.kcLabelClass!}" >${msg("username")}</label>
+                    <label for="totp" class="${properties.kcLabelClass!}" >手机号</label>
                 </div>
                 <div class="${properties.kcInputWrapperClass!}">
                     <input id="totp" 
