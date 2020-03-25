@@ -1,18 +1,17 @@
 package org.keycloak.sms.auth;
 
 import org.jboss.logging.Logger;
-import org.keycloak.authentication.AuthenticationFlowContext;
-import org.keycloak.authentication.Authenticator;
+import org.keycloak.authentication.*;
 import org.keycloak.events.Details;
 import org.keycloak.events.EventType;
 import org.keycloak.forms.login.LoginFormsProvider;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.RealmModel;
-import org.keycloak.models.UserModel;
+import org.keycloak.models.*;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.services.validation.Validation;
 
 import javax.ws.rs.core.Response;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * @author yanfeiwuji
@@ -27,9 +26,11 @@ public class SmsAuthenticator implements Authenticator {
     private static final String FLOW_REGISTRATION = "registration";
     private static final String FLOW_REST_CREDENTIALS = "reset-credentials";
     private static final String FLOW_FIRST_BROKER_LOGIN = "first-broker-login";
-
+    private static final String FLOW_AUTHENTICATE = "authenticate";
     private static final String SUBMIT_GETCODE = "getcode";
     private static final String SUBMIT_OK = "ok";
+
+    private static final String USER_ATTR_PHONE_KEY = "phone";
 
     @Override
     public void authenticate(AuthenticationFlowContext context) {
@@ -40,17 +41,27 @@ public class SmsAuthenticator implements Authenticator {
     }
 
 
+    public UserModel findUserModelByPhone(String phone, UserProvider userProvider, RealmModel realmModel) {
+        List<UserModel> userModels = userProvider.searchForUserByUserAttribute(USER_ATTR_PHONE_KEY, phone, realmModel);
+        return userModels != null && userModels.size() == 1 ? userModels.get(0) : null;
+    }
+
     @Override
     public void action(AuthenticationFlowContext context) {
 
-
         logger.infof("action plow  %s", context.getFlowPath());
 
+        UserProvider userProvider = context.getSession().users();
+        RealmModel realmModel = context.getRealm();
+
+        context.getRealm();
         String flowPath = context.getFlowPath();
         String phone = (context.getHttpRequest().getDecodedFormParameters().getFirst("phone"));
         String submitAction = (context.getHttpRequest().getDecodedFormParameters().getFirst("submitAction"));
         LoginFormsProvider loginFormsProvider = context.form();
-        setScene(context, loginFormsProvider);
+        // 设置场景字段
+        this.setScene(context, loginFormsProvider);
+
         loginFormsProvider.setAttribute("phone", phone);
 
         String code = (context.getHttpRequest().getDecodedFormParameters().getFirst("code"));
@@ -66,15 +77,22 @@ public class SmsAuthenticator implements Authenticator {
         switch (flowPath) {
             case FLOW_REGISTRATION:
                 logger.infof("注册");
-                UserModel newUser = context.getSession().users().getUserByUsername(phone, context.getRealm());
+                UserModel newUser = this.findUserModelByPhone(phone, userProvider, realmModel);
                 if (newUser != null) {
                     setError("该手机号已被注册", context, loginFormsProvider);
                     return;
                 }
                 break;
             case FLOW_REST_CREDENTIALS:
-                UserModel oldUser = context.getSession().users().getUserByUsername(phone, context.getRealm());
+                UserModel oldUser = this.findUserModelByPhone(phone, userProvider, realmModel);
                 if (oldUser == null) {
+                    setError("该手机号未注册", context, loginFormsProvider);
+                    return;
+                }
+                break;
+            case FLOW_AUTHENTICATE:
+                UserModel hasUser = this.findUserModelByPhone(phone, userProvider, realmModel);
+                if (hasUser == null) {
                     setError("该手机号未注册", context, loginFormsProvider);
                     return;
                 }
@@ -85,7 +103,7 @@ public class SmsAuthenticator implements Authenticator {
         switch (submitAction) {
             case SUBMIT_GETCODE:
                 logger.infof("发送验证码");
-                context.getAuthenticatorConfig();
+                // context.getAuthenticatorConfig();
                 boolean su = SmsUtil.sendSms(phone, context);
                 if (su) {
                     loginFormsProvider.setAttribute("sendCode", true);
@@ -101,13 +119,15 @@ public class SmsAuthenticator implements Authenticator {
                     // 说明成功
                     UserModel user;
                     if (FLOW_REST_CREDENTIALS.equals(flowPath)) {
-                        user = context.getSession().users().getUserByUsername(phone, context.getRealm());
+                        user = this.findUserModelByPhone(phone, userProvider, realmModel);
                     } else if (FLOW_REGISTRATION.equals(flowPath)) {
-                        user = context.getSession().users().addUser(context.getRealm(), phone);
+                        user = userProvider.addUser(realmModel, phone);
+                        user.setSingleAttribute(USER_ATTR_PHONE_KEY, phone);
                     } else if (FLOW_FIRST_BROKER_LOGIN.equals(flowPath)) {
-                        user = context.getSession().users().getUserByUsername(phone, context.getRealm());
+                        user = this.findUserModelByPhone(phone, userProvider, realmModel);
                         if (user == null) {
-                            user = context.getSession().users().addUser(context.getRealm(), phone);
+                            user = userProvider.addUser(realmModel, phone);
+                            user.setSingleAttribute(USER_ATTR_PHONE_KEY, phone);
                         }
                     } else {
                         // no
@@ -148,6 +168,10 @@ public class SmsAuthenticator implements Authenticator {
                 return;
             case FLOW_FIRST_BROKER_LOGIN:
                 loginFormsProvider.setAttribute("scene", "绑定/注册新用户");
+                return;
+            case FLOW_AUTHENTICATE:
+                loginFormsProvider.setAttribute("scene", "手机号登陆");
+                return;
             default:
                 return;
         }

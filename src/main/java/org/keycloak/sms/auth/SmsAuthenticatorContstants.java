@@ -27,4 +27,7 @@ public class SmsAuthenticatorContstants {
     public static final String CONF_SMS_CODE_EXP = "smsCodeExp";
 
 
+    /**
+     * ----   conf start    -----------
+     **/
 }

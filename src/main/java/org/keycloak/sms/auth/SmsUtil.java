@@ -104,7 +104,7 @@ public class SmsUtil {
             return false;
         }
 
-        // 缺次数校验
+        // 参数校验
         String appid = config.get(SmsAuthenticatorContstants.CONF_APP_ID);
         String appKey = config.get(SmsAuthenticatorContstants.CONF_APP_KEY);
         String templateId = config.get(SmsAuthenticatorContstants.CONF_TWMPLATE_ID);
@@ -134,7 +134,7 @@ public class SmsUtil {
         config.forEach((k, v) -> {
             logger.infof("%s %s", k, v);
         });
-        logger.infof(listParams.stream().collect(Collectors.joining("===")));
+
         SmsSingleSender smsSingleSender = new SmsSingleSender(Integer.valueOf(appid), appKey);
 
         try {
