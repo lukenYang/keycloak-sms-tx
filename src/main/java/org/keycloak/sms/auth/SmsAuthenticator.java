@@ -186,7 +186,7 @@ public class SmsAuthenticator implements Authenticator {
                 loginFormsProvider.setAttribute("scene", "绑定/注册新用户");
                 return;
             case FLOW_AUTHENTICATE:
-                loginFormsProvider.setAttribute("scene", "手机号登陆");
+                loginFormsProvider.setAttribute("scene", "手机号验证");
                 return;
             default:
                 return;
