@@ -19,6 +19,7 @@ public class SmsAuthenticatorContstants {
     // 模板id
     public static final String CONF_TWMPLATE_ID = "templateId";
     // 模板参数
+
     public static final String CONF_TEMPLATE_PARAMS = "templateParams";
     // 验证码长度
     public static final String CONF_SMS_CODE_LENGTH = "smsCodeLength";
