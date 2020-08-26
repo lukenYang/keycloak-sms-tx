@@ -7,16 +7,15 @@
     <parent>
         <groupId>org.keycloak</groupId>
         <artifactId>keycloak-parent</artifactId>
-        <version>9.0.2</version>
+        <version>11.0.0</version>
     </parent>
     
     <artifactId>keycloak-sms-auth-spi</artifactId>
 
-    <version>9.0.2</version>
     <packaging>jar</packaging>
 
     <properties>
-        <keycloak.version>9.0.2</keycloak.version>
+        <keycloak.version>11.0.0</keycloak.version>
         <infinispan.version>10.1.2.Final</infinispan.version>
         <txcloud.version>3.1.6</txcloud.version>
         <sms.version>1.0.6</sms.version>

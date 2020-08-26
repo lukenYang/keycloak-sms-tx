@@ -31,12 +31,10 @@ public class SmsAuthenticator implements Authenticator {
 
     private static final String USER_ATTR_PHONE_KEY = "phone";
 
-
     @Override
     public void authenticate(AuthenticationFlowContext context) {
         logger.infof("auth");
         String flowPath = context.getFlowPath();
-
         if (FLOW_AUTHENTICATE.equals(flowPath)) {
             UserModel userModel = context.getUser();
             if (userModel != null) {
